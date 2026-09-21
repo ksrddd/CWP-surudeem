@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 first_num = int(input("Give me the first number: "))
 sec_num = int(input("Give me the second number: "))
 print("Thank you!")
