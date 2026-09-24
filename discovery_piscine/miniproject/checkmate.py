@@ -2,29 +2,24 @@
 
 def checkmate(board, *extra_rows):
     """
-    ฟังก์ชันตรวจสอบว่า King กำลังถูก Check หรือไม่
-    - พิมพ์ "Success" หาก King ถูก Check
-    - พิมพ์ "Fail" หาก King ไม่ได้ถูก Check
-    - พิมพ์ "Error" หากกระดานไม่ถูกต้องตามกติกา
+    ฟังก์ชันตรวจสอบว่า King ถูกรุก (Check) หรือไม่ ตามโจทย์ Rush00
+    - พิมพ์ "Success" หาก King ถูกรุก
+    - พิมพ์ "Fail" หาก King ปลอดภัย
+    - พิมพ์ "Error" หรือไม่พิมพ์อะไร หากกระดานผิดกติกา
     """
     try:
-        # 1. จัดการ input ให้เป็น list ของแถว (rows)
+        # 1. จัดการ input ให้เป็น list ของแถว (รองรับทั้งแบบ string แผ่นเดียว หรือส่งแยกแถว)
         if extra_rows:
             rows = [board] + list(extra_rows)
         elif isinstance(board, str):
-            stripped = board.strip('\n\r')
-            if not stripped:
+            board_clean = board.replace('\r', '').strip('\n')
+            if not board_clean:
                 print("Error")
                 return
-            rows = stripped.splitlines()
-        elif isinstance(board, (list, tuple)):
-            rows = list(board)
+            rows = board_clean.split('\n')
+        elif isinstance(board, list):
+            rows = board
         else:
-            print("Error")
-            return
-
-        # 2. ตรวจสอบว่ามีข้อมูลแถวหรือไม่
-        if not rows:
             print("Error")
             return
 
@@ -33,82 +28,139 @@ def checkmate(board, *extra_rows):
             print("Error")
             return
 
-        # 3. ตรวจสอบว่าเป็นกระดานสี่เหลี่ยมจัตุรัส และหาตำแหน่งของ King (K)
-        king_pos = None
+        # 2. ตรวจสอบว่าเป็นกระดานสี่เหลี่ยมจัตุรัส (ความยาวของทุกแถวต้องเท่ากับ size)
+        for row in rows:
+            if len(row) != size:
+                print("Error")
+                return
+
+        # 3. วนลูปหาตำแหน่งของ King (K) ซึ่งต้องมีเพียง 1 ตัวเท่านั้น
+        king_r = -1
+        king_c = -1
         king_count = 0
 
         for r in range(size):
-            row = rows[r]
-            if not isinstance(row, str) or len(row) != size:
-                print("Error")
-                return
             for c in range(size):
-                if row[c] == 'K':
-                    king_pos = (r, c)
+                if rows[r][c] == 'K':
+                    king_r = r
+                    king_c = c
                     king_count += 1
 
-        # บนกระดานต้องมี King เพียงตัวเดียวเท่านั้น
-        if king_count != 1 or king_pos is None:
+        if king_count != 1:
             print("Error")
             return
 
-        kr, kc = king_pos
+        # 4. ตรวจสอบ Pawn (P): โจมตีทแยงขึ้นบน ดังนั้นจะกิน King ได้ ต้องอยู่แถวล่าง (king_r + 1)
+        p_row = king_r + 1
+        if p_row < size:
+            # เฉียงซ้ายล่าง
+            if king_c - 1 >= 0 and rows[p_row][king_c - 1] == 'P':
+                print("Success")
+                return
+            # เฉียงขวาล่าง
+            if king_c + 1 < size and rows[p_row][king_c + 1] == 'P':
+                print("Success")
+                return
 
-        # 4. ตรวจสอบ Pawn (P): ตามโจทย์ Pawn โจมตีทแยงขึ้นด้านบน
-        p_row = kr + 1
-        if 0 <= p_row < size:
-            for p_col in (kc - 1, kc + 1):
-                if 0 <= p_col < size:
-                    if rows[p_row][p_col] == 'P':
-                        print("Success")
-                        return
+        # 5. ตรวจสอบแนวตรง 4 ทิศ (Rook 'R' และ Queen 'Q')
+        # เดินขึ้น
+        r = king_r - 1
+        while r >= 0:
+            cell = rows[r][king_c]
+            if cell in ('R', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'B', 'K'):
+                break  # มีหมากตัวอื่นบังทาง
+            r -= 1
 
-        # 5. ตรวจสอบ Knight (N): เคลื่อนที่แบบตัว L 8 ทิศทาง
-        knight_moves = [
-            (-2, -1), (-2, 1), (-1, -2), (-1, 2),
-            (1, -2), (1, 2), (2, -1), (2, 1)
-        ]
-        for dr, dc in knight_moves:
-            nr = kr + dr
-            nc = kc + dc
-            if 0 <= nr < size and 0 <= nc < size:
-                if rows[nr][nc] == 'N':
-                    print("Success")
-                    return
+        # เดินลง
+        r = king_r + 1
+        while r < size:
+            cell = rows[r][king_c]
+            if cell in ('R', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'B', 'K'):
+                break
+            r += 1
 
-        # 6. ตรวจสอบแนวตรง 4 ทิศ สำหรับ Rook (R) และ Queen (Q)
-        straight_directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        for dr, dc in straight_directions:
-            nr = kr + dr
-            nc = kc + dc
-            while 0 <= nr < size and 0 <= nc < size:
-                cell = rows[nr][nc]
-                if cell in ('P', 'B', 'R', 'Q', 'N', 'K'):
-                    if cell in ('R', 'Q'):
-                        print("Success")
-                        return
-                    else:
-                        break  # มีหมากตัวอื่นขวางเส้นทาง
-                nr += dr
-                nc += dc
+        # เดินไปทางซ้าย
+        c = king_c - 1
+        while c >= 0:
+            cell = rows[king_r][c]
+            if cell in ('R', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'B', 'K'):
+                break
+            c -= 1
 
-        # 7. ตรวจสอบแนวทแยง 4 ทิศ สำหรับ Bishop (B) และ Queen (Q)
-        diagonal_directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-        for dr, dc in diagonal_directions:
-            nr = kr + dr
-            nc = kc + dc
-            while 0 <= nr < size and 0 <= nc < size:
-                cell = rows[nr][nc]
-                if cell in ('P', 'B', 'R', 'Q', 'N', 'K'):
-                    if cell in ('B', 'Q'):
-                        print("Success")
-                        return
-                    else:
-                        break  # มีหมากตัวอื่นขวางเส้นทาง
-                nr += dr
-                nc += dc
+        # เดินไปทางขวา
+        c = king_c + 1
+        while c < size:
+            cell = rows[king_r][c]
+            if cell in ('R', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'B', 'K'):
+                break
+            c += 1
 
-        # หากไม่มีหมากตัวใดสามารถกิน King ได้
+        # 6. ตรวจสอบแนวทแยง 4 ทิศ (Bishop 'B' และ Queen 'Q')
+        # ทแยงซ้ายบน
+        r = king_r - 1
+        c = king_c - 1
+        while r >= 0 and c >= 0:
+            cell = rows[r][c]
+            if cell in ('B', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'R', 'K'):
+                break  # มีหมากตัวอื่นบังทาง
+            r -= 1
+            c -= 1
+
+        # ทแยงขวาบน
+        r = king_r - 1
+        c = king_c + 1
+        while r >= 0 and c < size:
+            cell = rows[r][c]
+            if cell in ('B', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'R', 'K'):
+                break
+            r -= 1
+            c += 1
+
+        # ทแยงซ้ายล่าง
+        r = king_r + 1
+        c = king_c - 1
+        while r < size and c >= 0:
+            cell = rows[r][c]
+            if cell in ('B', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'R', 'K'):
+                break
+            r += 1
+            c -= 1
+
+        # ทแยงขวาล่าง
+        r = king_r + 1
+        c = king_c + 1
+        while r < size and c < size:
+            cell = rows[r][c]
+            if cell in ('B', 'Q'):
+                print("Success")
+                return
+            elif cell in ('P', 'R', 'K'):
+                break
+            r += 1
+            c += 1
+
+        # 7. ถ้าไม่มีหมากตัวใดรุก King ได้
         print("Fail")
 
     except Exception:
